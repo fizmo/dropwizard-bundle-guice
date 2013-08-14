@@ -1,5 +1,7 @@
 package org.fizmo.dropwizard.guice;
 
+import com.google.common.base.Optional;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -7,8 +9,9 @@ import com.google.inject.Stage;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.spi.container.servlet.WebConfig;
-import com.yammer.dropwizard.Bundle;
+import com.yammer.dropwizard.ConfiguredBundle;
 import com.yammer.dropwizard.config.Bootstrap;
+import com.yammer.dropwizard.config.Configuration;
 import com.yammer.dropwizard.config.Environment;
 
 import java.util.Collection;
@@ -17,21 +20,36 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-public class GuiceBundle implements Bundle {
+public class GuiceBundle<T> implements ConfiguredBundle<T> {
 
-    private final Injector injector;
+    private final Iterable<Module> modules;
+    private final Optional<Injector> parentInjector;
 
-    private GuiceBundle(Injector injector) {
-        this.injector = injector;
+    private GuiceBundle(final Iterable<Module> modules, final Optional<Injector> parentInjector) {
+        this.modules = modules;
+        this.parentInjector = parentInjector;
     }
 
     @Override
-    public void initialize(Bootstrap<?> bootstrap) {
+    public void initialize(final Bootstrap<?> bootstrap) {
 
     }
 
     @Override
-    public void run(final Environment environment) {
+    public void run(final T configuration, final Environment environment) {
+        final Module configModule = new AbstractModule() {
+            @Override
+            @SuppressWarnings("unchecked")
+            protected void configure() {
+                final Class<T> cls = (Class<T>) configuration.getClass();
+                bind(cls).toInstance(configuration);
+            }
+        };
+
+        final Injector injector = parentInjector.or(Guice.createInjector())
+                .createChildInjector(configModule)
+                .createChildInjector(modules);
+
         final GuiceContainer container = new GuiceContainer(injector) {
             @Override
             public ResourceConfig getDefaultResourceConfig(Map<String, Object> props, WebConfig webConfig) {
@@ -50,7 +68,7 @@ public class GuiceBundle implements Bundle {
 
         protected abstract T self();
 
-        protected abstract Injector injector();
+        protected abstract Optional<Injector> injector();
 
         public T withModules(Module module)
         {
@@ -77,8 +95,8 @@ public class GuiceBundle implements Bundle {
             return modules;
         }
 
-        public GuiceBundle build(){
-            return new GuiceBundle(injector());
+        public <CT extends Configuration> GuiceBundle<CT> build(){
+            return new GuiceBundle<CT>(modules(), injector());
         }
     }
 
@@ -93,8 +111,8 @@ public class GuiceBundle implements Bundle {
         protected ParentedBuilder self() { return this; }
 
         @Override
-        protected Injector injector() {
-            return parentInjector.createChildInjector(modules());
+        protected Optional<Injector> injector() {
+            return Optional.of(parentInjector);
         }
     }
 
@@ -110,8 +128,8 @@ public class GuiceBundle implements Bundle {
         protected StagedBuilder self() { return this; }
 
         @Override
-        protected Injector injector() {
-            return Guice.createInjector(stage, modules());
+        protected Optional<Injector> injector() {
+            return Optional.of(Guice.createInjector(stage));
         }
     }
 
@@ -127,8 +145,8 @@ public class GuiceBundle implements Bundle {
         }
 
         @Override
-        protected Injector injector() {
-            return Guice.createInjector(modules());
+        protected Optional<Injector> injector() {
+            return Optional.absent();
         }
     }
 
