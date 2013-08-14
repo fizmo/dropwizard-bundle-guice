@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Module;
 import com.google.inject.Stage;
+import com.sun.jersey.api.core.DefaultResourceConfig;
+import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.yammer.dropwizard.Bundle;
 import com.yammer.dropwizard.config.Environment;
@@ -56,6 +58,8 @@ public class TestGuiceBundle {
     // TODO. Verify some state in the modules.
     private void runContainer(Bundle bundle) throws ServletException {
         Environment environment = mock(Environment.class);
+        ResourceConfig resourceConfig = new DefaultResourceConfig();
+        when(environment.getJerseyResourceConfig()).thenReturn(resourceConfig);
 
         bundle.run(environment);
 

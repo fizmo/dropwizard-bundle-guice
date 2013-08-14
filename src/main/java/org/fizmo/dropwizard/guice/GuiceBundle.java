@@ -1,12 +1,12 @@
 package org.fizmo.dropwizard.guice;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
+import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import com.sun.jersey.spi.container.servlet.WebConfig;
 import com.yammer.dropwizard.Bundle;
 import com.yammer.dropwizard.config.Bootstrap;
 import com.yammer.dropwizard.config.Environment;
@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class GuiceBundle implements Bundle {
 
@@ -30,8 +31,13 @@ public class GuiceBundle implements Bundle {
     }
 
     @Override
-    public void run(Environment environment) {
-        final GuiceContainer container = new GuiceContainer(injector);
+    public void run(final Environment environment) {
+        final GuiceContainer container = new GuiceContainer(injector) {
+            @Override
+            public ResourceConfig getDefaultResourceConfig(Map<String, Object> props, WebConfig webConfig) {
+                return environment.getJerseyResourceConfig();
+            }
+        };
         environment.setJerseyServletContainer(container);
     }
 
