@@ -2,10 +2,13 @@ package org.fizmo.dropwizard.guice;
 
 import com.google.common.base.Optional;
 import com.google.inject.AbstractModule;
+import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Stage;
+import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.spi.container.servlet.WebConfig;
@@ -13,17 +16,21 @@ import com.yammer.dropwizard.ConfiguredBundle;
 import com.yammer.dropwizard.config.Bootstrap;
 import com.yammer.dropwizard.config.Configuration;
 import com.yammer.dropwizard.config.Environment;
+import com.yammer.metrics.core.HealthCheck;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GuiceBundle<T> implements ConfiguredBundle<T> {
 
     private final Iterable<Module> modules;
     private final Optional<Injector> parentInjector;
+
+    private static final Key<Set<HealthCheck>> healthChecksKey = Key.get(new TypeLiteral<Set<HealthCheck>>() {});
 
     private GuiceBundle(final Iterable<Module> modules, final Optional<Injector> parentInjector) {
         this.modules = modules;
@@ -56,7 +63,17 @@ public class GuiceBundle<T> implements ConfiguredBundle<T> {
                 return environment.getJerseyResourceConfig();
             }
         };
+
         environment.setJerseyServletContainer(container);
+
+        // Support Module definition of health checks
+        if (!injector.findBindingsByType(healthChecksKey.getTypeLiteral()).isEmpty()) {
+            final Set<HealthCheck> healthChecks = injector.getInstance(healthChecksKey);
+            for (HealthCheck hc : healthChecks) {
+                environment.addHealthCheck(hc);
+            }
+        }
+
     }
 
     private static abstract class AbstractBuilder<T extends AbstractBuilder> {

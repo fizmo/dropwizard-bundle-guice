@@ -3,12 +3,14 @@ package org.fizmo.dropwizard.guice;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Stage;
+import com.google.inject.multibindings.Multibinder;
 import com.sun.jersey.api.core.DefaultResourceConfig;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.yammer.dropwizard.ConfiguredBundle;
 import com.yammer.dropwizard.config.Configuration;
 import com.yammer.dropwizard.config.Environment;
+import com.yammer.metrics.core.HealthCheck;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -18,6 +20,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import java.util.Collections;
 
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -41,6 +45,27 @@ public class TestGuiceBundle {
         }
     }
 
+    private static class TestHealthCheck extends HealthCheck {
+
+        private TestHealthCheck() {
+            super("test");
+        }
+
+        @Override
+        protected Result check() throws Exception {
+            return Result.healthy();
+        }
+    }
+
+    private class HealthCheckModule extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            final Multibinder<HealthCheck> multibinder = Multibinder.newSetBinder(binder(), HealthCheck.class);
+            multibinder.addBinding().to(TestHealthCheck.class);
+        }
+    }
+
     @Test
     public void TestSimpleBundle() throws Exception {
         ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder().withModules(new RootResourceModule()).build();
@@ -59,9 +84,28 @@ public class TestGuiceBundle {
         runContainer(bundle);
     }
 
-    // TODO. Verify some state in the modules.
+    @Test
+    public void TestHealthChecks() throws Exception {
+        ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder()
+                .withModules(new RootResourceModule(), new HealthCheckModule()).build();
+
+        Environment environment = mock(Environment.class);
+
+        runContainer(bundle, environment);
+
+        ArgumentCaptor<HealthCheck> captor = ArgumentCaptor.forClass(HealthCheck.class);
+        verify(environment).addHealthCheck(captor.capture());
+
+        assertTrue(captor.getValue() instanceof TestHealthCheck);
+    }
+
     private void runContainer(ConfiguredBundle<TestConfig> bundle) throws Exception {
         Environment environment = mock(Environment.class);
+        runContainer(bundle, environment);
+    }
+
+    // TODO. Verify some state in the modules.
+    private void runContainer(ConfiguredBundle<TestConfig> bundle, Environment environment) throws Exception {
         ResourceConfig resourceConfig = new DefaultResourceConfig();
         when(environment.getJerseyResourceConfig()).thenReturn(resourceConfig);
 
