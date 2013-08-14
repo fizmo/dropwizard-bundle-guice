@@ -64,7 +64,7 @@ public class TestGuiceBundle {
 
         GuiceContainer container = captor.getValue();
         ServletConfig config = mock(ServletConfig.class);
-        when(config.getInitParameterNames()).thenReturn(Collections.<String>emptyEnumeration());
+        when(config.getInitParameterNames()).thenReturn(Collections.enumeration(Collections.<String>emptyList()));
         ServletContext context = mock(ServletContext.class);
         when(config.getServletContext()).thenReturn(context);
 
