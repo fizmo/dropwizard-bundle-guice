@@ -1,8 +1,9 @@
 package org.fizmo.dropwizard.guice;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.AbstractModule;
-import com.google.inject.Binding;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -25,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.collect.ImmutableList.of;
+
 public class GuiceBundle<T> implements ConfiguredBundle<T> {
 
     private final Iterable<Module> modules;
@@ -43,19 +46,22 @@ public class GuiceBundle<T> implements ConfiguredBundle<T> {
     }
 
     @Override
-    public void run(final T configuration, final Environment environment) {
+    public void run(final T configuration, final Environment environment)
+    {
+        final Iterable<Module> configedModules = configureModules(configuration, modules);
+
         final Module configModule = new AbstractModule() {
             @Override
             @SuppressWarnings("unchecked")
             protected void configure() {
                 final Class<T> cls = (Class<T>) configuration.getClass();
                 bind(cls).toInstance(configuration);
+                bind(Environment.class).toInstance(environment);
             }
         };
 
         final Injector injector = parentInjector.or(Guice.createInjector())
-                .createChildInjector(configModule)
-                .createChildInjector(modules);
+                .createChildInjector(Iterables.concat(of(configModule), configedModules));
 
         final GuiceContainer container = new GuiceContainer(injector) {
             @Override
@@ -74,6 +80,27 @@ public class GuiceBundle<T> implements ConfiguredBundle<T> {
             }
         }
 
+    }
+
+    private Iterable<Module> configureModules(final T config, final Iterable<Module> modules)
+    {
+        final List<Module> configedModules = Lists.newArrayList();
+
+        for (Module m : modules)
+        {
+            if (m instanceof ConfiguredModule<?>)
+            {
+                // TODO: reflection to pre-validate if it's got the right type parameter
+                final ConfiguredModule<T> cm = (ConfiguredModule<T>) m;
+                configedModules.add(cm.withConfiguration(config));
+            }
+            else
+            {
+                configedModules.add(m);
+            }
+        }
+
+        return configedModules;
     }
 
     private static abstract class AbstractBuilder<T extends AbstractBuilder> {

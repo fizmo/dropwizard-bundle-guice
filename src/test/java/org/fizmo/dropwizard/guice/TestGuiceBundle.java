@@ -1,7 +1,10 @@
 package org.fizmo.dropwizard.guice;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Binder;
 import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.multibindings.Multibinder;
 import com.sun.jersey.api.core.DefaultResourceConfig;
@@ -20,8 +23,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import java.util.Collections;
 
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +37,14 @@ public class TestGuiceBundle {
     @Path("/")
     public static class RootResource
     {
+        private final Environment env;
+
+        @Inject
+        public RootResource(Environment env) {
+
+            this.env = env;
+        }
+
         @GET
         public String get() { return "hello, world!"; }
     }
@@ -42,6 +53,23 @@ public class TestGuiceBundle {
         @Override
         protected void configure() {
             bind(RootResource.class);
+        }
+    }
+
+    private class RootResourceConfigured extends AbstractModule implements ConfiguredModule<TestConfig> {
+
+        private TestConfig config;
+
+        @Override
+        protected void configure() {
+            assertTrue(config != null);
+            install(new RootResourceModule());
+        }
+
+        @Override
+        public Module withConfiguration(TestConfig configuration) {
+            config = configuration;
+            return this;
         }
     }
 
@@ -74,7 +102,16 @@ public class TestGuiceBundle {
 
     @Test
     public void TestParentedBundle() throws Exception {
-        ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder().withParent(Guice.createInjector(new RootResourceModule())).build();
+        final Module parentModule = mock(Module.class);
+
+        ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder()
+                .withParent(Guice.createInjector(parentModule))
+                .withModules(new RootResourceModule())
+                .build();
+
+
+        verify(parentModule).configure(any(Binder.class));
+
         runContainer(bundle);
     }
 
@@ -97,6 +134,12 @@ public class TestGuiceBundle {
         verify(environment).addHealthCheck(captor.capture());
 
         assertTrue(captor.getValue() instanceof TestHealthCheck);
+    }
+
+    @Test
+    public void TestConfiguredModule() throws Exception {
+        ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder().withModules(new RootResourceConfigured()).build();
+        runContainer(bundle);
     }
 
     private void runContainer(ConfiguredBundle<TestConfig> bundle) throws Exception {
