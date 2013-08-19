@@ -24,6 +24,26 @@ Guice modules can help in exposing abstractions without awkward factory methods.
 public interfaces can be exposed in a public module, enabling late-binding of implementations based on configuration.
 It's likely possible to do similar things using Dropwizard's bundles; we simply prefer Guice's mechanisms.
 
+## Getting Started
+
+To add Guice to your Dropwizard project, create an instance of GuiceBundle and add it to your bootstrap.
+
+    public class HelloWorldService extends Service<HelloWorldConfiguration> {
+
+        @Override
+        public void initialize(Bootstrap<HelloWorldConfiguration> bootstrap) {
+            GuiceBundle<HelloWorldConfiguration> guiceBundle = new GuiceBundle.Builder()
+                    .withModules(new HelloWorldModule())
+                    .build();
+
+            bootstrap.addBundle(guiceBundle);
+        }
+
+    }
+
+In the simplest cases, your services `run` method will be empty, as the GuiceBundle will take care of adding
+classes to the environment.
+
 ## Binding Resources and Providers
 
 Binding resources or providers is as simple as declaring the binding in a module:
@@ -59,6 +79,13 @@ can be populated by hand, but it is intended for use with the
             multibinder.addBinding().to(MyHealthCheck.class);
         }
     }
+
+## Accessing Dropwizard configuration in Modules
+
+The Dropwizard `Configuration` class used by your service is injected into classes that declare it as a dependency,
+but in some cases you many need access to the configuration at bind-time. If your module also implements
+`ConfiguredModule`, then the GuiceBundle will call `withConfiguration` prior to creating the injector. Note that
+the bindier will not be set at this time, so the configuration should be saved for use in the `configure` method.
 
 ## Future Directions
 
