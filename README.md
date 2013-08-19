@@ -41,7 +41,7 @@ To add Guice to your Dropwizard project, create an instance of GuiceBundle and a
 
     }
 
-In the simplest cases, your services `run` method will be empty, as the GuiceBundle will take care of adding
+In the simplest cases, your service's `run` method will be empty, as the GuiceBundle will take care of adding
 classes to the environment.
 
 ## Binding Resources and Providers
@@ -85,7 +85,7 @@ can be populated by hand, but it is intended for use with the
 The Dropwizard `Configuration` class used by your service is injected into classes that declare it as a dependency,
 but in some cases you many need access to the configuration at bind-time. If your module also implements
 `ConfiguredModule`, then the GuiceBundle will call `withConfiguration` prior to creating the injector. Note that
-the bindier will not be set at this time, so the configuration should be saved for use in the `configure` method.
+the binder will not be set at this time, so the configuration should be saved for use in the `configure` method.
 
 ## Future Directions
 
@@ -110,3 +110,7 @@ needs of Guice modules.
 
 ## Questions
 
+I try to keep an eye on the [dropwizard user mailing list](https://groups.google.com/forum/#!forum/dropwizard-user),
+or you can ping me (`ccurrie`) on the [`#dropwizard-user` channel on freenode]
+(http://webchat.freenode.net/?channels=dropwizard-user). Please use these for questions on usage, and use GitHub
+issues only for defects or feature requests.
