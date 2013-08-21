@@ -9,20 +9,19 @@ This is a project for integrating Guice with Dropwizard. There are many like it,
 If you're here, you probably already believe in the advantages of Guice, but there are also some stylistic preferences
 that motivated its creation.
 
-### Per-request injection of Resource classes
+### Preference over Jersey built-in dependency injection
 
-Dropwizard's documentation demonstrates one style of registering Resources, in the form of singleton instances that are
-shared by all threads. This module could support that as well (with `@Singleton` annotations), but our preference is
-to rely on Jersey's default behavior of creating a new Resource instance per request. This allows for
-constructor-injection of Request parameters, which can keep a class DRY, and helps immutability. It also encourages
-factoring state outside of the Resource class, into explicitly designed thread-safe state classes or, ideally, to stable
-storage.
+Dropwizard does not provide any dependency injection, and instead relies on the mechanisms provided by Jersey.
+Jersey's injection framework is tailored to the work of injecting Jersey-specific data into resources, whereas
+Guice is designed as a general-purpose DI framework. Using Guice allows a service author to write modules that
+are not Jersey-specific so that they can be re-used in other contexts.
 
 ### Modularity of concerns
 
 Guice modules can help in exposing abstractions without awkward factory methods. Package-private implementations of
 public interfaces can be exposed in a public module, enabling late-binding of implementations based on configuration.
-It's likely possible to do similar things using Dropwizard's bundles; we simply prefer Guice's mechanisms.
+It's likely possible to do similar things using Dropwizard's bundles or Jersey's providers; we simply prefer Guice's
+mechanisms.
 
 ## Getting Started
 
