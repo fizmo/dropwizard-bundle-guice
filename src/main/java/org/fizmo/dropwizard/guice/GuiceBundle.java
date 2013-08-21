@@ -10,6 +10,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.TypeLiteral;
+import com.google.inject.servlet.GuiceFilter;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.spi.container.servlet.WebConfig;
@@ -49,28 +50,12 @@ public class GuiceBundle<T> implements ConfiguredBundle<T> {
     public void run(final T configuration, final Environment environment)
     {
         final Iterable<Module> configedModules = configureModules(configuration, modules);
-
-        final Module configModule = new AbstractModule() {
-            @Override
-            @SuppressWarnings("unchecked")
-            protected void configure() {
-                final Class<T> cls = (Class<T>) configuration.getClass();
-                bind(cls).toInstance(configuration);
-                bind(Environment.class).toInstance(environment);
-            }
-        };
+        final DropwizardModule<T> dwModule = new DropwizardModule<T>(configuration, environment);
 
         final Injector injector = parentInjector.or(Guice.createInjector())
-                .createChildInjector(Iterables.concat(of(configModule), configedModules));
+                .createChildInjector(Iterables.concat(of(dwModule), configedModules));
 
-        final GuiceContainer container = new GuiceContainer(injector) {
-            @Override
-            public ResourceConfig getDefaultResourceConfig(Map<String, Object> props, WebConfig webConfig) {
-                return environment.getJerseyResourceConfig();
-            }
-        };
-
-        environment.setJerseyServletContainer(container);
+        environment.addFilter(injector.getInstance(GuiceFilter.class), "*");
 
         // Support Module definition of health checks
         if (!injector.findBindingsByType(healthChecksKey.getTypeLiteral()).isEmpty()) {

@@ -7,6 +7,7 @@ import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.servlet.GuiceFilter;
 import com.sun.jersey.api.core.DefaultResourceConfig;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -14,6 +15,7 @@ import com.yammer.dropwizard.ConfiguredBundle;
 import com.yammer.dropwizard.config.Configuration;
 import com.yammer.dropwizard.config.Environment;
 import com.yammer.metrics.core.HealthCheck;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -21,6 +23,8 @@ import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 
 import static org.junit.Assert.assertTrue;
@@ -33,6 +37,16 @@ public class TestGuiceBundle {
 
     public static class TestConfig extends Configuration {}
 
+    /*
+     * Since GuiceFilter has a static pipeline, we need to reset it between tests
+     * otherwise it will generate warnings after the first test.
+     */
+    @After
+    public void resetGuiceFilterPipeline() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Method m = GuiceFilter.class.getDeclaredMethod("reset");
+        m.setAccessible(true);
+        m.invoke(null);
+    }
 
     @Path("/")
     public static class RootResource
@@ -117,7 +131,7 @@ public class TestGuiceBundle {
 
     @Test
     public void TestStagedBundle() throws Exception {
-        ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder().withStage(Stage.TOOL).withModules(new RootResourceModule()).build();
+        ConfiguredBundle<TestConfig> bundle = new GuiceBundle.Builder().withStage(Stage.DEVELOPMENT).withModules(new RootResourceModule()).build();
         runContainer(bundle);
     }
 
