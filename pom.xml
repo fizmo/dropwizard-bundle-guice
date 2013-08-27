@@ -9,6 +9,7 @@
 
   <name>Dropwizard Bundle for Guice</name>
   <url>http://github.com/fizmo/dropwizard-bundle-guice</url>
+  <description>Bundle (plugin-in) for Dropwizard to enable Guice dependency injection</description>
 
   <licenses>
     <license>
