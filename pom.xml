@@ -20,7 +20,7 @@
 
   <scm>
     <connection>scm:git:https://github.com/fizmo/dropwizard-bundle-guice.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com:fizmo/dropwizard-bundle-guice.git</developerConnection>
+    <developerConnection>scm:git:ssh://git@github.com/fizmo/dropwizard-bundle-guice.git</developerConnection>
     <url>https://github.com/fizmo/dropwizard-bundle-guice</url>
   </scm>
 
