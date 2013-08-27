@@ -23,6 +23,52 @@ public interfaces can be exposed in a public module, enabling late-binding of im
 It's likely possible to do similar things using Dropwizard's bundles or Jersey's providers; we simply prefer Guice's
 mechanisms.
 
+### Caveats
+
+There are a couple of important notes to be aware of with the current version of the module.
+
+#### Do not bind generic interfaces or base classes
+
+The following binding will not work:
+
+    bind(new TypeReference<MessageBodyReader<MyCustomType>>(){}).to(MyCustomMessageBodyReader.class);
+
+Jersey only supports classes in its DI support. Any types bound as type references (to capture generic parameters)
+will be ignored by the underlying jersey-guice library. To properly register the provider it must be bound as a
+concrete class:
+
+    bind(MyCustomMessageBodyReader.class);
+
+#### Be aware of the jersey-guice binding life-cycle
+
+Jersey supports class binding, where the bound class's scope is per-request by default, except for providers which
+are always singletons; or instance binding, where the instance is naturally a singleton.
+
+Instance bindings are used to create object when the constructor needs parameters that are not available to the
+injector. Also, in jersey are sometimes to bind instances of generic types, since generic types can't be bound as
+classes. An example of this is the `BasicAuthProvider` in the dropwizard-auth module, which is usually registered as a
+singleton provider instance.
+
+Guice provides instance bindings as well, through `bind(type).toInstance(instance)`. However, the jersey-guice
+module does not expose the details of the binding to Jersey. Instead it looks at the bound classes for `@Path` or
+`@Provider` annotations, and only exposes the annotated classes to Jersey.
+
+This restriction and the one above have practical implications for the dropwizard-auth module, whose providers have type
+parameters and are not annotated with `@Provider`, because they are designed to be registered as singletons and not classes.
+
+To solve both issues, you must create a non-parameterized derived class annotated with `@Provider`.
+
+    @javax.ws.rs.ext.Provider
+    public class MyBasicAuthProvider extends BasicAuthProvider<User> {
+        public AnnotatedBasicAuthProvider(Authenticator<BasicCredentials, User> authenticator, String realm) {
+            super(authenticator, realm);
+        }
+    }
+
+    bind(MyBasicAuthProvider.class);
+
+It is hoped these limitations can be lifted in future versions.
+
 ## Getting Started
 
 To add Guice to your Dropwizard project, create an instance of GuiceBundle and add it to your bootstrap.
